@@ -450,7 +450,7 @@ http.route({
     }
 
     // Get available resources (knowledge bases, etc.)
-    const resources = await ctx.runQuery(internal.mcp.listResources);
+    const resources = await ctx.runQuery(internal.mcpQueries.listResources);
 
     return jsonResponse({ resources }, 200, cors);
   }),
@@ -465,14 +465,15 @@ http.route({
   path: '/api/webhook/telegram',
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
-    // TODO: Implement Telegram webhook handler
-    // 1. Verify X-Telegram-Bot-Api-Secret-Token header
-    // 2. Parse payload
-    // 3. Find/create channel user
-    // 4. Run agent
-    // 5. Send response via Telegram API
-    console.log('Telegram webhook received');
-    return jsonResponse({ ok: true });
+    const body = await request.text();
+    const secretToken = request.headers.get('X-Telegram-Bot-Api-Secret-Token') || undefined;
+
+    const result = await ctx.runAction(internal.telegram.handleWebhook, {
+      body,
+      secretToken,
+    });
+
+    return jsonResponse(result);
   }),
 });
 

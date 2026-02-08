@@ -1,8 +1,5 @@
-'use node';
-
 import { query, mutation, internalQuery, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
-import { clawsyncAgent } from './agent/clawsync';
 
 /**
  * Thread Management

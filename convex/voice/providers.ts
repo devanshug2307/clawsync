@@ -1,6 +1,6 @@
 'use node';
 
-import { internalAction, internalQuery, internalMutation } from '../_generated/server';
+import { internalAction } from '../_generated/server';
 import { v } from 'convex/values';
 import { internal } from '../_generated/api';
 
@@ -12,6 +12,9 @@ import { internal } from '../_generated/api';
  * - NVIDIA Personaplex: NVIDIA's voice AI platform
  *
  * Each provider has its own implementation but shares a common interface.
+ * 
+ * IMPORTANT: Only actions are in this file (requires Node.js).
+ * Queries and mutations are in ./queries.ts
  */
 
 export interface VoiceConfig {
@@ -39,48 +42,6 @@ export interface SpeechToTextResult {
   }>;
 }
 
-// Get the default voice provider
-export const getDefaultProvider = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const provider = await ctx.db
-      .query('voiceProviders')
-      .filter((q) => q.eq(q.field('isDefault'), true))
-      .first();
-
-    if (!provider) {
-      // Fallback to first enabled provider
-      return await ctx.db
-        .query('voiceProviders')
-        .filter((q) => q.eq(q.field('enabled'), true))
-        .first();
-    }
-
-    return provider;
-  },
-});
-
-// Get provider by ID
-export const getProvider = internalQuery({
-  args: {
-    providerId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query('voiceProviders')
-      .withIndex('by_provider', (q) => q.eq('providerId', args.providerId))
-      .first();
-  },
-});
-
-// List all voice providers
-export const listProviders = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query('voiceProviders').collect();
-  },
-});
-
 // Text-to-speech using configured provider
 export const textToSpeech = internalAction({
   args: {
@@ -92,10 +53,10 @@ export const textToSpeech = internalAction({
   handler: async (ctx, args) => {
     // Get provider config
     const provider = args.providerId
-      ? await ctx.runQuery(internal.voice.providers.getProvider, {
-          providerId: args.providerId,
-        })
-      : await ctx.runQuery(internal.voice.providers.getDefaultProvider);
+      ? await ctx.runQuery(internal.voice.queries.getProvider, {
+        providerId: args.providerId,
+      })
+      : await ctx.runQuery(internal.voice.queries.getDefaultProvider);
 
     if (!provider || !provider.enabled) {
       throw new Error('No voice provider available');
@@ -142,10 +103,10 @@ export const speechToText = internalAction({
   },
   handler: async (ctx, args) => {
     const provider = args.providerId
-      ? await ctx.runQuery(internal.voice.providers.getProvider, {
-          providerId: args.providerId,
-        })
-      : await ctx.runQuery(internal.voice.providers.getDefaultProvider);
+      ? await ctx.runQuery(internal.voice.queries.getProvider, {
+        providerId: args.providerId,
+      })
+      : await ctx.runQuery(internal.voice.queries.getDefaultProvider);
 
     if (!provider || !provider.enabled || !provider.supportsSTT) {
       throw new Error('No STT provider available');
@@ -173,56 +134,6 @@ export const speechToText = internalAction({
       default:
         throw new Error(`Unknown provider: ${provider.providerId}`);
     }
-  },
-});
-
-// Create voice session
-export const createSession = internalMutation({
-  args: {
-    providerId: v.string(),
-    voiceId: v.optional(v.string()),
-    threadId: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const sessionId = crypto.randomUUID();
-
-    await ctx.db.insert('voiceSessions', {
-      sessionId,
-      threadId: args.threadId,
-      providerId: args.providerId,
-      voiceId: args.voiceId,
-      status: 'active',
-      durationSecs: 0,
-      startedAt: Date.now(),
-    });
-
-    return { sessionId };
-  },
-});
-
-// End voice session
-export const endSession = internalMutation({
-  args: {
-    sessionId: v.string(),
-    durationSecs: v.number(),
-    tokensUsed: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('voiceSessions')
-      .withIndex('by_sessionId', (q) => q.eq('sessionId', args.sessionId))
-      .first();
-
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
-    await ctx.db.patch(session._id, {
-      status: 'ended',
-      durationSecs: args.durationSecs,
-      tokensUsed: args.tokensUsed,
-      endedAt: Date.now(),
-    });
   },
 });
 

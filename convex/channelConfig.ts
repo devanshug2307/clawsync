@@ -1,4 +1,4 @@
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalQuery } from './_generated/server';
 import { v } from 'convex/values';
 
 /**
@@ -18,6 +18,17 @@ export const list = query({
 
 // Get channel config by type
 export const getByType = query({
+  args: { channelType: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('channelConfig')
+      .withIndex('by_type', (q) => q.eq('channelType', args.channelType))
+      .first();
+  },
+});
+
+// Internal version for actions
+export const getByTypeInternal = internalQuery({
   args: { channelType: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db

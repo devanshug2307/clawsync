@@ -8,47 +8,58 @@
  * 1. Set WORKOS_CLIENT_ID in Convex environment variables
  * 2. Set WORKOS_API_KEY in Convex environment variables
  * 3. Set WORKOS_REDIRECT_URI to your callback URL
- * 4. Uncomment the authConfig export below
+ * 4. Set WORKOS_ENABLED to true below
  * 5. Run `npx convex dev` to sync configuration
  *
  * See: https://docs.convex.dev/auth/authkit/
  */
 
-// Placeholder until WorkOS is configured
+// Toggle to enable WorkOS authentication
+// Set to true when you have configured WorkOS credentials
 const WORKOS_ENABLED = false;
-
-// WorkOS client ID from environment (set in Convex Dashboard)
-const clientId = process.env.WORKOS_CLIENT_ID;
 
 /**
  * Auth configuration for WorkOS JWT validation
  *
- * This validates JWTs issued by WorkOS when users authenticate.
+ * When WORKOS_ENABLED is true, this validates JWTs issued by WorkOS.
  * Two providers are needed to handle both SSO and User Management tokens.
+ * 
+ * IMPORTANT: Only access process.env.WORKOS_CLIENT_ID when enabled,
+ * otherwise Convex will require the env var even when not using it.
  */
-const authConfig = WORKOS_ENABLED && clientId ? {
-  providers: [
-    // SSO Provider
-    {
-      type: 'customJwt' as const,
-      issuer: 'https://api.workos.com/',
-      algorithm: 'RS256' as const,
-      applicationID: clientId,
-      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
-    },
-    // User Management Provider
-    {
-      type: 'customJwt' as const,
-      issuer: `https://api.workos.com/user_management/${clientId}`,
-      algorithm: 'RS256' as const,
-      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
-    },
-  ],
-} : {
-  providers: [],
-};
+function getAuthConfig() {
+  if (!WORKOS_ENABLED) {
+    return { providers: [] };
+  }
 
-export default authConfig;
+  const clientId = process.env.WORKOS_CLIENT_ID;
+  if (!clientId) {
+    console.warn('WORKOS_CLIENT_ID not set, auth disabled');
+    return { providers: [] };
+  }
+
+  return {
+    providers: [
+      // SSO Provider
+      {
+        type: 'customJwt' as const,
+        issuer: 'https://api.workos.com/',
+        algorithm: 'RS256' as const,
+        applicationID: clientId,
+        jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+      },
+      // User Management Provider
+      {
+        type: 'customJwt' as const,
+        issuer: `https://api.workos.com/user_management/${clientId}`,
+        algorithm: 'RS256' as const,
+        jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+      },
+    ],
+  };
+}
+
+export default getAuthConfig();
 
 /**
  * Environment Variables Required for WorkOS:

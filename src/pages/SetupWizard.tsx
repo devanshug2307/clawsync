@@ -45,6 +45,9 @@ const MODEL_OPTIONS = [
   { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', provider: 'anthropic', description: 'Most capable, best reasoning' },
   { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', description: 'OpenAI flagship model' },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', description: 'Fast and affordable' },
+  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'google', description: 'Fast and efficient Gemini model' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'google', description: 'Advanced reasoning, long context' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'google', description: 'Latest fast model (preview)' },
   { id: 'grok-3', name: 'Grok 3', provider: 'xai', description: 'xAI flagship model' },
   { id: 'grok-3-fast', name: 'Grok 3 Fast', provider: 'xai', description: 'Fast Grok variant' },
 ];
@@ -197,7 +200,7 @@ export function SetupWizard() {
               ))}
             </div>
             <div className="env-reminder">
-              <strong>Required:</strong> Set <code>{selectedModel.provider.toUpperCase()}_API_KEY</code> in
+              <strong>Required:</strong> Set <code>{selectedModel.provider === 'google' ? 'GEMINI_API_KEY' : `${selectedModel.provider.toUpperCase()}_API_KEY`}</code> in
               your Convex environment variables.
             </div>
             <div className="step-actions">

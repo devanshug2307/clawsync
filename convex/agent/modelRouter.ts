@@ -2,6 +2,7 @@ import { ActionCtx } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { anthropic } from '@ai-sdk/anthropic';
 import { openai } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { LanguageModelV1 } from 'ai';
 
@@ -13,6 +14,7 @@ import { LanguageModelV1 } from 'ai';
  * Provider mapping:
  * - anthropic: @ai-sdk/anthropic (direct API)
  * - openai: @ai-sdk/openai (direct API)
+ * - google: @ai-sdk/google (Gemini models via Google AI Studio)
  * - openrouter: @ai-sdk/openai-compatible (https://openrouter.ai/api/v1)
  * - opencode-zen: @ai-sdk/openai-compatible (https://opencode.ai/zen/v1)
  * - custom: @ai-sdk/openai-compatible (user-provided base URL)
@@ -82,6 +84,13 @@ export async function resolveModel(ctx: ActionCtx): Promise<ResolvedModel> {
 
 /**
  * Create an AI SDK model instance from provider and model ID
+ * 
+ * Gemini Model IDs (use with 'google' provider):
+ * - gemini-2.0-flash-exp (fast, good for most tasks)
+ * - gemini-1.5-pro (advanced reasoning)
+ * - gemini-1.5-flash (balanced)
+ * - gemini-3-flash-preview (latest flash)
+ * - gemini-3-pro-preview (latest pro)
  */
 function createModel(provider: string, modelId: string): LanguageModelV1 {
   switch (provider) {
@@ -90,6 +99,15 @@ function createModel(provider: string, modelId: string): LanguageModelV1 {
 
     case 'openai':
       return openai(modelId);
+
+    case 'google': {
+      // Native Google AI (Gemini) support
+      // Uses GEMINI_API_KEY env var in Convex
+      const gemini = createGoogleGenerativeAI({
+        apiKey: process.env.GEMINI_API_KEY,
+      });
+      return gemini(modelId);
+    }
 
     case 'openrouter': {
       const openrouter = createOpenAICompatible({
@@ -146,6 +164,11 @@ export function getAvailableProviders(): Array<{
       id: 'openai',
       name: 'OpenAI',
       description: 'GPT models via direct API',
+    },
+    {
+      id: 'google',
+      name: 'Google AI (Gemini)',
+      description: 'Gemini models via Google AI Studio',
     },
     {
       id: 'openrouter',
